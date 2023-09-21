@@ -1,0 +1,53 @@
+Sub PopulatePriceTableForCurrentTradingDay()
+    ' Declare variables
+    Dim ISIN As String
+    Dim ws As Worksheet
+    Dim BloombergData As Variant
+    Dim startTime As Date
+    Dim currentTime As Date
+    Dim rowCount As Long
+    
+    ' Prompt the user to enter ISIN
+    ISIN = InputBox("Enter ISIN:")
+    
+    ' Create a new worksheet for the data
+    Set ws = ThisWorkbook.Sheets.Add
+    ws.Name = "PriceData_" & ISIN
+    
+    ' Create headers for the table
+    ws.Cells(1, 1).Value = "Time"
+    ws.Cells(1, 2).Value = "PX_BID"
+    ws.Cells(1, 3).Value = "PX_MID"
+    ws.Cells(1, 4).Value = "PX_ASK"
+    
+    ' Get the start time of the current trading day (assumes trading starts at 9:00 AM, adjust as needed)
+    startTime = Date + TimeValue("09:00:00")
+    currentTime = Now()
+    
+    ' Initialize row count
+    rowCount = 2
+    
+    ' Fetch Bloomberg data for PX_BID, PX_ASK, and PX_MID fields at each minute interval
+    Do While startTime <= currentTime
+        ' Fetch Bloomberg data for the specified ISIN
+        BloombergData = Application.Run("BDP", ISIN, "PX_BID,PX_ASK,PX_MID", Format(startTime, "yyyy-mm-dd HH:mm:ss"))
+        
+        ' Check if Bloomberg data is available and not empty
+        If Not IsEmpty(BloombergData) And TypeName(BloombergData) = "Variant()" Then
+            ' Write data to the worksheet
+            ws.Cells(rowCount, 1).Value = startTime
+            ws.Cells(rowCount, 2).Value = BloombergData(1, 1) ' PX_BID
+            ws.Cells(rowCount, 3).Value = BloombergData(3, 1) ' PX_MID
+            ws.Cells(rowCount, 4).Value = BloombergData(2, 1) ' PX_ASK
+            
+            ' Increment the row count
+            rowCount = rowCount + 1
+        End If
+        
+        ' Move to the next minute
+        startTime = startTime + TimeValue("00:01:00") ' 1 minute interval
+    Loop
+    
+    ' Format columns as needed
+    ws.Columns("A:D").AutoFit
+End Sub
